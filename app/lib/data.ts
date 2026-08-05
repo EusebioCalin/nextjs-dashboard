@@ -8,6 +8,8 @@ import {
   Revenue,
 } from './definitions';
 import { formatCurrency } from './utils';
+import { de } from 'zod/v4/locales';
+import { cacheLife, cacheTag } from 'next/cache';
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
@@ -133,9 +135,10 @@ const ITEMS_PER_PAGE = 6;
 export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
+  sort: string,
 ) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-
+  console.log('sort', sort);
   try {
     const invoices = await sql<InvoicesTable[]>`
       SELECT
@@ -154,10 +157,13 @@ export async function fetchFilteredInvoices(
         invoices.amount::text ILIKE ${`%${query}%`} OR
         invoices.date::text ILIKE ${`%${query}%`} OR
         invoices.status ILIKE ${`%${query}%`}
-      ORDER BY invoices.date DESC
+      
+      ORDER BY 
+        CASE WHEN ${sort} = 'asc' THEN invoices.amount END ASC,
+        CASE WHEN ${sort} = 'desc' THEN invoices.amount END DESC
       LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
     `;
-
+    console.log('Fetched invoices:', invoices);
     return invoices;
   } catch (error) {
     console.error('Database Error:', error);
@@ -165,7 +171,19 @@ export async function fetchFilteredInvoices(
   }
 }
 
-export async function fetchInvoicesPages(query: string) {
+export async function fetchInvoicesPages(query: string, delay: boolean = false) {
+  'use cache'
+  cacheTag('invoices-pages');
+  cacheLife({
+    stale: 3600, // 1 hour
+    revalidate: 7200, // 2 hours
+    expire: 86400, // 1 day
+  });
+  console.log('Fetching total pages for invoices...');
+  if (delay) {
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    await delay(1000); // Artificial delay for demonstration purposes
+  }
   try {
     const data = await sql`SELECT COUNT(*)
     FROM invoices

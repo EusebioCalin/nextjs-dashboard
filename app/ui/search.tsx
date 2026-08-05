@@ -1,11 +1,7 @@
 "use client";
 
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import {
-  usePathname,
-  useRouter,
-  useSearchParams,
-} from "next/dist/client/components/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
 
 export default function Search({ placeholder }: { placeholder: string }) {
@@ -17,6 +13,7 @@ export default function Search({ placeholder }: { placeholder: string }) {
     console.log(`Searching... ${term}`);
     const params = new URLSearchParams(searchParams);
     params.set("page", "1"); // Reset to page 1 on new search
+    params.set("sort", "asc"); // Reset sort on new search
     if (term) {
       params.set("query", term);
     } else {
